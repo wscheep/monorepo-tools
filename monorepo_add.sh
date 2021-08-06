@@ -20,23 +20,24 @@ fi
 MONOREPO_SCRIPT_DIR=$(dirname "$0")
 # Wipe original refs (possible left-over back-up after rewriting git history)
 $MONOREPO_SCRIPT_DIR/original_refs_wipe.sh
-for PARAM in $@; do
-    # Parse parameters in format <remote-name>[:<subdirectory>]
-    PARAM_ARR=(${PARAM//:/ })
-    REMOTE=${PARAM_ARR[0]}
-    SUBDIRECTORY=${PARAM_ARR[1]}
-    if [ "$SUBDIRECTORY" == "" ]; then
-        SUBDIRECTORY=$REMOTE
-    fi
-    echo "Building branch 'master' of the remote '$REMOTE'"
-    git checkout --detach $REMOTE/master
-    $MONOREPO_SCRIPT_DIR/rewrite_history_into.sh $SUBDIRECTORY
-    MERGE_REFS="$MERGE_REFS $(git rev-parse HEAD)"
-    # Wipe the back-up of original history
-    $MONOREPO_SCRIPT_DIR/original_refs_wipe.sh
-done
+# for PARAM in $@; do
+PARAM=$1
+# Parse parameters in format <remote-name>[:<subdirectory>]
+PARAM_ARR=(${PARAM//:/ })
+REMOTE=${PARAM_ARR[0]}
+SUBDIRECTORY=${PARAM_ARR[1]}
+if [ "$SUBDIRECTORY" == "" ]; then
+    SUBDIRECTORY=$REMOTE
+fi
+echo "Building branch 'master' of the remote '$REMOTE'"
+git checkout --detach $REMOTE/master
+$MONOREPO_SCRIPT_DIR/rewrite_history_into.sh $SUBDIRECTORY
+MERGE_REFS="$MERGE_REFS $(git rev-parse HEAD)"
+# Wipe the back-up of original history
+$MONOREPO_SCRIPT_DIR/original_refs_wipe.sh
+
 # Merge all master branches
-COMMIT_MSG="merge multiple repositories into an existing monorepo"$'\n'$'\n'"- merged using: 'monorepo_add.sh $@'"$'\n'"- see https://github.com/shopsys/monorepo-tools"
+COMMIT_MSG="Merge repository $@ into system repo"$'\n'$'\n'"- merged using: 'monorepo_add.sh $@'"
 git checkout master
 echo "Merging refs: $MERGE_REFS"
 git merge --no-commit -q $MERGE_REFS --allow-unrelated-histories
@@ -48,4 +49,3 @@ for REF in $MERGE_REFS; do
 done
 git commit -m "$COMMIT_MSG"
 git reset --hard
-
